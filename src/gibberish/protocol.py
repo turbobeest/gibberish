@@ -1192,96 +1192,6 @@ class ProtocolHandler:
             logging.error("Failed to reassemble data")
             return None
 
-
-@dataclass
-class ReassemblyBuffer:
-    """
-    Buffer for reassembling frames into complete data
-
-    Tracks received frames and handles out-of-order delivery
-    """
-    file_id: str
-    total_frames: int
-    received_frames: Dict[int, bytes] = field(default_factory=dict)  # seq -> payload
-    complete: bool = False
-    start_time: float = field(default_factory=time.time)
-
-    def add_frame(self, sequence_number: int, payload: bytes) -> bool:
-        """
-        Add a received frame to the buffer
-
-        Args:
-            sequence_number: Frame sequence number
-            payload: Frame payload data
-
-        Returns:
-            True if this completes the reassembly
-        """
-        # Store frame payload
-        self.received_frames[sequence_number] = payload
-
-        # Check if all frames received
-        if len(self.received_frames) == self.total_frames:
-            self.complete = True
-            logging.info(f"All {self.total_frames} frames received for file {self.file_id[:8]}...")
-            return True
-
-        return False
-
-    def is_complete(self) -> bool:
-        """Check if all frames have been received"""
-        return self.complete
-
-    def get_missing_sequences(self) -> List[int]:
-        """
-        Get list of missing frame sequence numbers
-
-        Returns:
-            List of missing sequence numbers
-        """
-        received_seqs = set(self.received_frames.keys())
-        all_seqs = set(range(self.total_frames))
-        missing = sorted(all_seqs - received_seqs)
-        return missing
-
-    def get_progress(self) -> float:
-        """
-        Get reassembly progress as percentage
-
-        Returns:
-            Progress percentage (0-100)
-        """
-        if self.total_frames == 0:
-            return 0.0
-        return (len(self.received_frames) / self.total_frames) * 100.0
-
-    def reassemble(self) -> Optional[bytes]:
-        """
-        Reassemble frames into complete data
-
-        Returns:
-            Complete reassembled data or None if incomplete
-        """
-        if not self.complete:
-            missing = self.get_missing_sequences()
-            logging.error(f"Cannot reassemble: missing {len(missing)} frames: {missing[:10]}...")
-            return None
-
-        # Reassemble in sequence order
-        data = b""
-        for seq in range(self.total_frames):
-            if seq not in self.received_frames:
-                logging.error(f"Missing frame {seq} during reassembly")
-                return None
-            data += self.received_frames[seq]
-
-        logging.info(f"Reassembled {len(data)} bytes from {self.total_frames} frames")
-        return data
-
-    def elapsed_time(self) -> float:
-        """Get time since reassembly started"""
-        return time.time() - self.start_time
-
     def _create_handshake_payload(self, session_id: str, protocol_version: int) -> bytes:
         """
         Create handshake message payload
@@ -2271,3 +2181,93 @@ class ReassemblyBuffer:
         except Exception as e:
             logging.error(f"Error sending SYNC_COMPLETE: {e}")
             return False
+
+
+@dataclass
+class ReassemblyBuffer:
+    """
+    Buffer for reassembling frames into complete data
+
+    Tracks received frames and handles out-of-order delivery
+    """
+    file_id: str
+    total_frames: int
+    received_frames: Dict[int, bytes] = field(default_factory=dict)  # seq -> payload
+    complete: bool = False
+    start_time: float = field(default_factory=time.time)
+
+    def add_frame(self, sequence_number: int, payload: bytes) -> bool:
+        """
+        Add a received frame to the buffer
+
+        Args:
+            sequence_number: Frame sequence number
+            payload: Frame payload data
+
+        Returns:
+            True if this completes the reassembly
+        """
+        # Store frame payload
+        self.received_frames[sequence_number] = payload
+
+        # Check if all frames received
+        if len(self.received_frames) == self.total_frames:
+            self.complete = True
+            logging.info(f"All {self.total_frames} frames received for file {self.file_id[:8]}...")
+            return True
+
+        return False
+
+    def is_complete(self) -> bool:
+        """Check if all frames have been received"""
+        return self.complete
+
+    def get_missing_sequences(self) -> List[int]:
+        """
+        Get list of missing frame sequence numbers
+
+        Returns:
+            List of missing sequence numbers
+        """
+        received_seqs = set(self.received_frames.keys())
+        all_seqs = set(range(self.total_frames))
+        missing = sorted(all_seqs - received_seqs)
+        return missing
+
+    def get_progress(self) -> float:
+        """
+        Get reassembly progress as percentage
+
+        Returns:
+            Progress percentage (0-100)
+        """
+        if self.total_frames == 0:
+            return 0.0
+        return (len(self.received_frames) / self.total_frames) * 100.0
+
+    def reassemble(self) -> Optional[bytes]:
+        """
+        Reassemble frames into complete data
+
+        Returns:
+            Complete reassembled data or None if incomplete
+        """
+        if not self.complete:
+            missing = self.get_missing_sequences()
+            logging.error(f"Cannot reassemble: missing {len(missing)} frames: {missing[:10]}...")
+            return None
+
+        # Reassemble in sequence order
+        data = b""
+        for seq in range(self.total_frames):
+            if seq not in self.received_frames:
+                logging.error(f"Missing frame {seq} during reassembly")
+                return None
+            data += self.received_frames[seq]
+
+        logging.info(f"Reassembled {len(data)} bytes from {self.total_frames} frames")
+        return data
+
+    def elapsed_time(self) -> float:
+        """Get time since reassembly started"""
+        return time.time() - self.start_time
