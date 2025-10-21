@@ -2,6 +2,7 @@
 Interactive mode for Gibberish - simplified user experience
 """
 import click
+import json
 from pathlib import Path
 from rich.console import Console
 from rich.prompt import Prompt, Confirm
@@ -11,6 +12,31 @@ from rich.table import Table
 from rich import box
 
 console = Console()
+
+# Settings file path
+SETTINGS_DIR = Path.home() / '.gibberish'
+SETTINGS_FILE = SETTINGS_DIR / 'interactive_settings.json'
+
+
+def load_settings() -> dict:
+    """Load saved settings from disk"""
+    if SETTINGS_FILE.exists():
+        try:
+            with open(SETTINGS_FILE, 'r') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def save_settings(settings: dict) -> None:
+    """Save settings to disk"""
+    try:
+        SETTINGS_DIR.mkdir(parents=True, exist_ok=True)
+        with open(SETTINGS_FILE, 'w') as f:
+            json.dump(settings, f, indent=2)
+    except Exception as e:
+        console.print(f"[dim]Could not save settings: {e}[/dim]")
 
 
 def show_directory_tree(path: Path, max_depth: int = 3) -> None:
@@ -74,10 +100,14 @@ def run_transmitter_flow():
     """Interactive flow for transmitter"""
     console.print("\n[bold cyan]═══ TRANSMITTER MODE ═══[/bold cyan]\n")
 
+    # Load previous settings
+    settings = load_settings()
+
     # Get original directory
+    original_default = settings.get('transmitter_original', '.')
     original_path = Prompt.ask(
         "[cyan]Path to ORIGINAL directory[/cyan] (baseline/reference)",
-        default="."
+        default=original_default
     )
     original_path = Path(original_path).resolve()
 
@@ -86,15 +116,21 @@ def run_transmitter_flow():
         return
 
     # Get modified directory
+    modified_default = settings.get('transmitter_modified', '.')
     modified_path = Prompt.ask(
         "[cyan]Path to MODIFIED directory[/cyan] (with changes to transmit)",
-        default="."
+        default=modified_default
     )
     modified_path = Path(modified_path).resolve()
 
     if not modified_path.exists():
         console.print(f"[red]❌ Directory not found: {modified_path}[/red]")
         return
+
+    # Save settings for next time
+    settings['transmitter_original'] = str(original_path)
+    settings['transmitter_modified'] = str(modified_path)
+    save_settings(settings)
 
     # Show trees
     console.print("\n[bold]Original Directory:[/bold]")
@@ -194,16 +230,24 @@ def run_receiver_flow():
     """Interactive flow for receiver"""
     console.print("\n[bold magenta]═══ RECEIVER MODE ═══[/bold magenta]\n")
 
+    # Load previous settings
+    settings = load_settings()
+
     # Get target directory
+    target_default = settings.get('receiver_target', '.')
     target_path = Prompt.ask(
         "[magenta]Path to directory to RECEIVE updates[/magenta]",
-        default="."
+        default=target_default
     )
     target_path = Path(target_path).resolve()
 
     if not target_path.exists():
         console.print(f"[red]❌ Directory not found: {target_path}[/red]")
         return
+
+    # Save settings for next time
+    settings['receiver_target'] = str(target_path)
+    save_settings(settings)
 
     # Show current state
     console.print("\n[bold]Current Directory (will receive updates):[/bold]")
@@ -269,14 +313,22 @@ def run_interactive():
         border_style="cyan"
     ))
 
+    # Load previous settings
+    settings = load_settings()
+    last_role = settings.get('last_role', 't')
+
     # Ask role
     role = Prompt.ask(
-        "\n[bold]Are you the TRANSMITTER or RECEIVER?[/bold]",
-        choices=["transmitter", "receiver", "t", "r"],
-        default="transmitter"
+        "\n[bold]Role[/bold] (t=transmitter, r=receiver)",
+        choices=["t", "r"],
+        default=last_role
     )
 
-    if role in ["transmitter", "t"]:
+    # Save role for next time
+    settings['last_role'] = role
+    save_settings(settings)
+
+    if role == "t":
         run_transmitter_flow()
     else:
         run_receiver_flow()
