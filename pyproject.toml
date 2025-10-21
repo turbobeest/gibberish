@@ -61,7 +61,7 @@ Repository = "https://github.com/gibberish/gibberish"
 Issues = "https://github.com/gibberish/gibberish/issues"
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 include = ["gibberish*"]
 exclude = ["tests*"]
 

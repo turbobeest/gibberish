@@ -55,9 +55,7 @@ htmlcov/
 
 # Gibberish specific
 .gibberish/
-test.txt
-requirements.txt
-venv-py310/
+venv/
 
 # Development artifacts
 .taskmaster/

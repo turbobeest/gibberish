@@ -1089,5 +1089,36 @@ def history(ctx, directory: str, limit: int):
         return EXIT_GENERAL_ERROR
 
 
+@main.command()
+@click.pass_context
+def interactive(ctx):
+    """
+    Interactive mode - guided setup for transmitter and receiver
+
+    This simplified workflow guides you through:
+    1. Selecting your role (transmitter/receiver)
+    2. Specifying directories
+    3. Comparing and confirming changes
+    4. Synchronizing via acoustic transmission
+    """
+    try:
+        from gibberish.interactive import run_interactive
+        run_interactive()
+        return EXIT_SUCCESS
+    except ImportError as e:
+        error(f"Missing module: {e}")
+        return EXIT_GENERAL_ERROR
+    except KeyboardInterrupt:
+        console.print()
+        info("Cancelled by user")
+        return EXIT_SUCCESS
+    except Exception as e:
+        error(f"Interactive mode failed: {e}")
+        if ctx.obj['verbose']:
+            import traceback
+            console.print(traceback.format_exc(), style="red dim")
+        return EXIT_GENERAL_ERROR
+
+
 if __name__ == '__main__':
     sys.exit(main())

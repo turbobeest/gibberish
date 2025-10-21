@@ -5,15 +5,15 @@ Acoustic file synchronization for air-gapped machines using sound waves.
 ## Installation
 
 ### Requirements
-- Python 3.10 (for ggwave support)
+- Python 3.10+
 - Audio hardware (speakers + microphone or audio cable)
 
 ### Setup
 
+**macOS:**
 ```bash
 # Install Python 3.10
-brew install python@3.10  # macOS
-# or use your system package manager
+brew install python@3.10
 
 # Create virtual environment
 python3.10 -m venv venv
@@ -26,7 +26,47 @@ pip install -e .
 gibberish validate
 ```
 
+**Windows:**
+```powershell
+# Download and install Python 3.10+ from python.org
+
+# Create virtual environment
+python -m venv venv
+venv\Scripts\activate
+
+# Install Gibberish
+pip install -e .
+
+# Validate installation
+gibberish validate
+```
+
 ## Quick Start
+
+### Interactive Mode (Recommended)
+
+The simplest way to use Gibberish - guided step-by-step:
+
+```bash
+# Activate virtual environment first
+source venv/bin/activate  # macOS/Linux
+# OR
+venv\Scripts\activate     # Windows
+
+# Run interactive mode
+gibberish interactive
+```
+
+The interactive mode will:
+1. Ask if you're the **transmitter** or **receiver**
+2. Guide you through selecting directories
+3. Show file tree comparisons
+4. Coordinate the sync between both machines
+5. Transmit changes via sound waves
+
+### Advanced Mode (Manual Commands)
+
+For advanced users who want more control:
 
 ```bash
 # Initialize directory
@@ -47,6 +87,7 @@ gibberish listen
 
 ## Commands
 
+- `gibberish interactive` - **Guided interactive mode (recommended)**
 - `gibberish init <dir>` - Initialize directory
 - `gibberish baseline <dir>` - Create/manage baseline
 - `gibberish sync <dir>` - Transmit files acoustically
