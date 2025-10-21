@@ -1,0 +1,122 @@
+# Gibberish Configuration File
+# Default settings for acoustic file synchronization
+
+# Audio Transmission Settings
+audio:
+  # Audio sample rate in Hz (44100 or 48000 recommended)
+  sample_rate: 48000
+
+  # ggwave protocol ID (1-9, higher = faster but requires better audio quality)
+  # 1: Audible, slowest, most reliable
+  # 5: Ultrasonic, medium speed
+  # 9: Ultrasonic, fastest, requires cable connection
+  protocol_id: 5
+
+  # Transmission timeout in seconds
+  timeout: 30
+
+  # Cable detection threshold (SNR in dB)
+  # If SNR > threshold, use faster ultrasonic protocol
+  cable_detection_threshold: 40.0
+
+  # Frame size for audio transmission (bytes)
+  frame_size: 256
+
+# File Synchronization Settings
+sync:
+  # Chunk size for file processing (bytes)
+  chunk_size: 1024
+
+  # Maximum number of retransmission attempts
+  max_retries: 3
+
+  # Verify file checksums after transmission
+  verify_checksums: true
+
+  # Maximum file size for diff-based sync (MB)
+  # Files larger than this will be sent in full
+  max_diff_size: 10
+
+  # Enable compression for patches
+  compress_patches: true
+
+# Protocol Settings
+protocol:
+  # Stop-and-wait timeout calculation
+  # timeout = base_timeout + (rtt_multiplier * measured_rtt)
+  base_timeout: 5.0
+  rtt_multiplier: 2.0
+
+  # Handshake timeout in seconds
+  handshake_timeout: 30
+
+  # Session timeout in minutes
+  session_timeout: 60
+
+# File Ignore Patterns (gitignore-style)
+ignore_patterns:
+  - ".git/"
+  - ".gitignore"
+  - "*.pyc"
+  - "__pycache__/"
+  - ".gibberlan/"
+  - "*.log"
+  - ".DS_Store"
+  - "node_modules/"
+  - "venv/"
+  - ".env"
+  - "*.tmp"
+  - "*.swp"
+
+# Logging Configuration
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: INFO
+
+  # Log file path
+  file: "gibberish.log"
+
+  # Enable colorized console output
+  colorized: true
+
+  # Log format
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# LLM Integration Settings
+llm:
+  # Ollama model name
+  model: "llama3.2"
+
+  # LLM request timeout in seconds
+  timeout: 15.0
+
+  # Enable fallback to rule-based logic if LLM unavailable
+  fallback_enabled: true
+
+  # Use LLM for file prioritization
+  enable_prioritization: true
+
+  # Use LLM for conflict detection
+  enable_conflict_detection: true
+
+# Baseline Management
+baseline:
+  # Directory to store baseline data
+  directory: ".gibberlan/baseline"
+
+  # Automatically refresh baseline after successful sync
+  auto_refresh: true
+
+  # Keep backup of previous baseline
+  keep_backup: true
+
+# Advanced Settings
+advanced:
+  # Enable experimental features
+  experimental: false
+
+  # Bandwidth measurement interval (seconds)
+  bandwidth_measurement_interval: 5.0
+
+  # Progress update frequency (Hz)
+  progress_update_freq: 2.0
