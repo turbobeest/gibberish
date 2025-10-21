@@ -85,8 +85,16 @@ class AudioManager:
         self._last_tx_time = 0.0
         self._last_tx_bytes = 0
 
-        # Check if ggwave is available (no init needed for simple API)
+        # Initialize ggwave instance if available
         self._ggwave_available = GGWAVE_AVAILABLE
+        self._ggwave_instance = None
+        if self._ggwave_available:
+            try:
+                self._ggwave_instance = ggwave.init()
+                logging.info(f"ggwave instance initialized: {self._ggwave_instance}")
+            except Exception as e:
+                logging.warning(f"Failed to initialize ggwave: {e}")
+                self._ggwave_available = False
 
         # Audio stream
         self._stream = None
@@ -95,6 +103,15 @@ class AudioManager:
 
         logging.info(f"AudioManager initialized: mode={self.config.mode}, "
                     f"sample_rate={self.sample_rate}, ggwave={'available' if self._ggwave_available else 'mock'}")
+
+    def __del__(self):
+        """Cleanup ggwave instance on destruction"""
+        if hasattr(self, '_ggwave_instance') and self._ggwave_instance is not None:
+            try:
+                ggwave.free(self._ggwave_instance)
+                logging.debug(f"Freed ggwave instance {self._ggwave_instance}")
+            except Exception as e:
+                logging.debug(f"Error freeing ggwave instance: {e}")
 
     def encode(self, data: bytes) -> np.ndarray:
         """
@@ -157,15 +174,20 @@ class AudioManager:
         Returns:
             Decoded bytes or None if decoding failed
         """
-        if self._ggwave_available:
+        if self._ggwave_available and self._ggwave_instance is not None:
             try:
                 # Convert float32 samples to int16 bytes for ggwave
                 waveform_int16 = (audio_samples * 32768.0).astype(np.int16)
                 waveform_bytes = waveform_int16.tobytes()
-                # ggwave.decode() returns string or None
-                decoded_str = ggwave.decode(waveform_bytes)
-                if decoded_str:
-                    return decoded_str.encode('utf-8')
+                # ggwave.decode(instance_id, waveform_bytes) returns string like "b'DATA'" or None
+                decoded_result = ggwave.decode(self._ggwave_instance, waveform_bytes)
+                if decoded_result:
+                    # Result is a string representation like "b'HELLO'"
+                    # Strip the b' prefix and ' suffix, then encode to bytes
+                    if decoded_result.startswith("b'") and decoded_result.endswith("'"):
+                        decoded_str = decoded_result[2:-1]
+                        return decoded_str.encode('latin-1')  # Use latin-1 to preserve byte values
+                    return decoded_result.encode('utf-8')
                 return None
             except Exception as e:
                 logging.error(f"ggwave decoding failed: {e}")
