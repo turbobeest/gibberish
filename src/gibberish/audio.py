@@ -85,13 +85,8 @@ class AudioManager:
         self._last_tx_time = 0.0
         self._last_tx_bytes = 0
 
-        # Initialize ggwave if available
-        self._ggwave_instance = None
-        if GGWAVE_AVAILABLE:
-            try:
-                self._ggwave_instance = ggwave.init()
-            except Exception as e:
-                logging.warning(f"Failed to initialize ggwave: {e}")
+        # Check if ggwave is available (no init needed for simple API)
+        self._ggwave_available = GGWAVE_AVAILABLE
 
         # Audio stream
         self._stream = None
@@ -99,7 +94,7 @@ class AudioManager:
         self._is_recording = False
 
         logging.info(f"AudioManager initialized: mode={self.config.mode}, "
-                    f"sample_rate={self.sample_rate}, ggwave={'available' if self._ggwave_instance else 'mock'}")
+                    f"sample_rate={self.sample_rate}, ggwave={'available' if self._ggwave_available else 'mock'}")
 
     def encode(self, data: bytes) -> np.ndarray:
         """
@@ -111,16 +106,17 @@ class AudioManager:
         Returns:
             Audio samples as numpy array
         """
-        if self._ggwave_instance:
+        if self._ggwave_available:
             try:
                 # Use ggwave to encode
-                waveform = ggwave.encode(
-                    data,
-                    protocolId=self.protocol_id,
-                    sampleRate=self.sample_rate,
-                    volume=80
-                )
-                return np.array(waveform, dtype=np.float32)
+                # Note: ggwave.encode() takes just the payload string, returns int16 samples as bytes
+                payload_str = data.decode('utf-8') if isinstance(data, bytes) else data
+                waveform_bytes = ggwave.encode(payload_str)
+                # Convert int16 bytes to float32 numpy array normalized to [-1, 1]
+                waveform_int16 = np.frombuffer(waveform_bytes, dtype=np.int16)
+                waveform_float = waveform_int16.astype(np.float32) / 32768.0
+                logging.info(f"ggwave encoded {len(data)} bytes -> {len(waveform_float)} audio samples")
+                return waveform_float
             except Exception as e:
                 logging.error(f"ggwave encoding failed: {e}")
                 return self._mock_encode(data)
@@ -161,13 +157,15 @@ class AudioManager:
         Returns:
             Decoded bytes or None if decoding failed
         """
-        if self._ggwave_instance:
+        if self._ggwave_available:
             try:
-                # Convert to required format for ggwave
-                waveform = audio_samples.astype(np.float32).tobytes()
-                decoded = ggwave.decode(waveform, self.sample_rate)
-                if decoded:
-                    return bytes(decoded)
+                # Convert float32 samples to int16 bytes for ggwave
+                waveform_int16 = (audio_samples * 32768.0).astype(np.int16)
+                waveform_bytes = waveform_int16.tobytes()
+                # ggwave.decode() returns string or None
+                decoded_str = ggwave.decode(waveform_bytes)
+                if decoded_str:
+                    return decoded_str.encode('utf-8')
                 return None
             except Exception as e:
                 logging.error(f"ggwave decoding failed: {e}")
