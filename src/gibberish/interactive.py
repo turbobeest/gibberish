@@ -149,6 +149,7 @@ def run_transmitter_flow():
     Prompt.ask("\n[bold cyan]Press Enter when RECEIVER is ready[/bold cyan]")
 
     # Start transmission
+    import time
     from gibberish.audio import AudioManager
     from gibberish.protocol import ProtocolHandler
 
@@ -157,11 +158,29 @@ def run_transmitter_flow():
     audio_mgr = AudioManager()
     protocol = ProtocolHandler()
 
-    # Perform handshake
-    success, session_id = protocol.perform_handshake(audio_mgr, is_initiator=True)
+    # Perform handshake with 15-second retry window
+    console.print("[dim]Attempting handshake (15 second window)...[/dim]")
+    start_time = time.time()
+    timeout = 15.0
+    success = False
+    session_id = ""
+
+    while time.time() - start_time < timeout:
+        try:
+            success, session_id = protocol.perform_handshake(audio_mgr, is_initiator=True)
+            if success:
+                break
+            console.print("[dim]Retry...[/dim]")
+            time.sleep(1)
+        except Exception as e:
+            console.print(f"[dim]Handshake attempt failed: {e}[/dim]")
+            time.sleep(1)
+            continue
 
     if not success:
-        console.print("[red]❌ Handshake failed[/red]")
+        elapsed = time.time() - start_time
+        console.print(f"[red]❌ Handshake failed after {elapsed:.1f} seconds[/red]")
+        console.print("[yellow]Make sure receiver is ready and listening[/yellow]")
         return
 
     console.print(f"[green]✓ Connected! Session: {session_id[:8]}[/green]")
@@ -201,6 +220,7 @@ def run_receiver_flow():
     Prompt.ask("\n[bold magenta]Press Enter when TRANSMITTER is ready[/bold magenta]")
 
     # Start listening
+    import time
     from gibberish.audio import AudioManager
     from gibberish.protocol import ProtocolHandler
 
@@ -209,11 +229,29 @@ def run_receiver_flow():
     audio_mgr = AudioManager()
     protocol = ProtocolHandler()
 
-    # Perform handshake
-    success, session_id = protocol.perform_handshake(audio_mgr, is_initiator=False)
+    # Perform handshake with 15-second retry window
+    console.print("[dim]Attempting handshake (15 second window)...[/dim]")
+    start_time = time.time()
+    timeout = 15.0
+    success = False
+    session_id = ""
+
+    while time.time() - start_time < timeout:
+        try:
+            success, session_id = protocol.perform_handshake(audio_mgr, is_initiator=False)
+            if success:
+                break
+            console.print("[dim]Retry...[/dim]")
+            time.sleep(1)
+        except Exception as e:
+            console.print(f"[dim]Handshake attempt failed: {e}[/dim]")
+            time.sleep(1)
+            continue
 
     if not success:
-        console.print("[red]❌ Connection failed[/red]")
+        elapsed = time.time() - start_time
+        console.print(f"[red]❌ Connection failed after {elapsed:.1f} seconds[/red]")
+        console.print("[yellow]Make sure transmitter is ready and trying to connect[/yellow]")
         return
 
     console.print(f"[green]✓ Connected! Session: {session_id[:8]}[/green]")
